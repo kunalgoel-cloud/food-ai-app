@@ -2,136 +2,109 @@ import streamlit as st
 import pandas as pd
 import random
 
-# --- SMART DATABASE (Phase 1.7 - 2026 Accurate) ---
-# Each meal now includes 'Steps' for time-breakup and 'SKUs' for cost-breakup
+# --- REFINED DATABASE (v1.8) ---
 meals_data = [
     {
         "name": "Veg Poha", "type": "Breakfast", "vibe": "Quick", "cal": 250, "cook_time": 15, "order_time": 25, "cost": 35, "order": 90, "tags": "light, healthy, poha, rice", "veg": True,
-        "prep_steps": "1. Soak 150g Poha (5m)\n2. Chop 1 Onion & Potato (5m)\n3. Sauté with spices (5m)", 
-        "cost_breakup": "1. Poha Pack (200g): ₹25\n2. Veggies (Onion/Potato): ₹8\n3. Spices/Oil: ₹2"
+        "recipe_url": "https://www.youtube.com/results?search_query=how+to+make+veg+poha",
+        "cost_breakup": "1. Poha (150g): ₹25\n2. Onion/Potato/Spices: ₹10"
     },
     {
         "name": "Paneer Sandwich", "type": "Breakfast", "vibe": "Quick", "cal": 320, "cook_time": 10, "order_time": 30, "cost": 85, "order": 180, "tags": "protein, paneer, sandwich", "veg": True,
-        "prep_steps": "1. Slice Paneer & Veggies (4m)\n2. Arrange on Bread (2m)\n3. Toast (4m)",
-        "cost_breakup": "1. Amul Paneer (200g): ₹65\n2. Atta Bread (4 slices): ₹15\n3. Veggies/Butter: ₹5"
+        "recipe_url": "https://www.youtube.com/results?search_query=paneer+sandwich+recipe",
+        "cost_breakup": "1. Paneer (200g): ₹65\n2. Bread & Butter: ₹20"
     },
     {
         "name": "Rajma Chawal", "type": "Lunch", "vibe": "Relaxed", "cal": 450, "cook_time": 55, "order_time": 45, "cost": 65, "order": 240, "tags": "protein, beans, rice, family", "veg": True,
-        "prep_steps": "1. Pressure Cook Rajma (30m)\n2. Make Gravy (15m)\n3. Cook Rice (10m)",
-        "cost_breakup": "1. Rajma Beans (150g): ₹40\n2. Basmati Rice (100g): ₹15\n3. Gravy (Onion/Tomato/Spices): ₹10"
+        "recipe_url": "https://www.youtube.com/results?search_query=punjabi+rajma+chawal+recipe",
+        "cost_breakup": "1. Rajma (150g): ₹40\n2. Rice (100g): ₹15\n3. Gravy: ₹10"
     },
     {
         "name": "Dal Tadka + Rice", "type": "Lunch", "vibe": "Quick", "cal": 410, "cook_time": 30, "order_time": 35, "cost": 50, "order": 180, "tags": "light, comfort, dal, rice", "veg": True,
-        "prep_steps": "1. Cook Toor Dal (15m)\n2. Prepare Tadka (5m)\n3. Steam Rice (10m)",
-        "cost_breakup": "1. Toor Dal (100g): ₹25\n2. Basmati Rice (100g): ₹15\n3. Spices & Tadka Oil: ₹10"
+        "recipe_url": "https://www.youtube.com/results?search_query=dal+tadka+rice+recipe",
+        "cost_breakup": "1. Dal (100g): ₹25\n2. Rice: ₹15\n3. Tadka: ₹10"
     },
     {
         "name": "Egg Curry", "type": "Dinner", "vibe": "Quick", "cal": 380, "cook_time": 35, "order_time": 40, "cost": 55, "order": 210, "tags": "protein, eggs, spicy", "veg": False,
-        "prep_steps": "1. Boil Eggs (10m)\n2. Prepare Spicy Gravy (15m)\n3. Sauté Eggs in Gravy (10m)",
-        "cost_breakup": "1. Eggs (4 pcs): ₹24\n2. Onion/Tomato Gravy: ₹20\n3. Spices/Oil: ₹11"
-    },
-    {
-        "name": "Chicken Curry", "type": "Lunch", "vibe": "Relaxed", "cal": 520, "cook_time": 60, "order_time": 50, "cost": 180, "order": 380, "tags": "protein, chicken, spicy", "veg": False,
-        "prep_steps": "1. Clean & Marinate Chicken (15m)\n2. Prepare Rich Gravy (25m)\n3. Cook Chicken in Gravy (20m)",
-        "cost_breakup": "1. Raw Chicken (250g): ₹130\n2. Gravy (Veggies/Spices): ₹30\n3. Oil/Other: ₹20"
+        "recipe_url": "https://www.youtube.com/results?search_query=dhabha+style+egg+curry",
+        "cost_breakup": "1. Eggs (4): ₹24\n2. Gravy & Spices: ₹31"
     }
 ]
 df = pd.DataFrame(meals_data)
 
-st.set_page_config(page_title="MealBrain AI", layout="wide", page_icon="🍲")
+st.set_page_config(page_title="MealBrain AI", layout="wide")
 
-# --- SIDEBAR: INPUT ---
+# --- SIDEBAR ---
 with st.sidebar:
     st.header("1. Your Setup")
-    headcount = st.number_input("Headcount (People)", min_value=1, max_value=20, value=1)
+    headcount = st.number_input("Headcount (People)", min_value=1, value=3)
     diet = st.radio("Diet Preference", ["Veg Only", "Everything"])
     goal = st.select_slider("Health Goal", ["Light", "Balanced", "Cheat Day"])
     vibe = st.radio("Cooking Vibe", ["Quick", "Relaxed"])
 
 st.title("🍲 MealBrain AI")
-user_input = st.text_input("Craving something specific?", placeholder="e.g. 'spicy', 'paneer', 'eggs'")
 
-# --- ACTION LOGIC ---
-if 'last_meal' not in st.session_state: st.session_state.last_meal = None
+# --- LOGIC ---
+if 'meal' not in st.session_state: st.session_state.meal = None
 
-# Filtering
 f_df = df.copy()
 if diet == "Veg Only": f_df = f_df[f_df['veg'] == True]
 if goal == "Light": f_df = f_df[f_df['cal'] < 300]
 elif goal == "Balanced": f_df = f_df[(f_df['cal'] >= 300) & (f_df['cal'] <= 450)]
 
-if user_input:
-    f_df = f_df[f_df.apply(lambda x: user_input.lower() in x['name'].lower() or user_input.lower() in x['tags'], axis=1)]
-
-# Execution Buttons
 c1, c2, _ = st.columns([1, 1, 4])
-generate = c1.button("🚀 Get Meal")
-try_another = c2.button("🔄 Try Another")
-
-# Determine which meal to show
-meal_to_show = None
-if generate or try_another:
+if c1.button("🚀 Get Meal") or c2.button("🔄 Suggest Another"):
     if not f_df.empty:
-        # Prevent the same meal from appearing twice in a row
-        available_meals = f_df[f_df['name'] != st.session_state.last_meal]
-        if not available_meals.empty:
-            meal_to_show = available_meals.sample(n=1).iloc[0]
-            st.session_state.last_meal = meal_to_show['name']
-        else:
-            meal_to_show = f_df.iloc[0] # Edge case if only 1 meal fits filters
-    else:
-        st.error("No results found! Try changing your diet or calorie filters.")
+        st.session_state.meal = f_df.sample(n=1).iloc[0]
 
 # --- RESULTS DISPLAY ---
-if meal_to_show is not None:
-    winner = meal_to_show
-    st.header(f"Recommendation: **{winner['name']}**")
+if st.session_state.meal is not None:
+    m = st.session_state.meal
+    st.header(f"Recommendation: {m['name']}")
     
-    # FIXED: Image Engine (Switched to Unsplash Source)
-    # Using specific query [Indian, food, DishName] ensures a high-quality visual.
-    # Appending a random number ensures it changes when you click 'Try Another'.
-    img_url = f"https://source.unsplash.com/800x400/?indian,food,{winner['name'].replace(' ', '')}?random={random.randint(1,1000)}"
-    st.image(img_url, use_container_width=True, caption=f"Visualizing your fresh serving of {winner['name']}...")
-    
+    # FIXED IMAGE: Using Unsplash Source with cache-busting randomizer
+    img_seed = random.randint(1, 1000)
+    st.image(f"https://source.unsplash.com/featured/800x400?indian,food,{m['name'].replace(' ', '')}&sig={img_seed}", use_container_width=True)
+
     st.markdown("---")
     
-    # DYNAMIC SCALING (HEADCOUNT)
-    total_cook_cost = winner['cost'] * headcount
-    total_order_cost = winner['order'] * headcount
-    total_cal = winner['cal'] * headcount
-    
-    # --- ROW 1: HOME COOKING (Smart Attributes) ---
+    # --- ROW 1: OPTION 1 (COOK AT HOME) ---
     st.subheader("🏠 Option 1: Cook at Home")
-    h1, h2, h3, h4, h5 = st.columns([1, 1, 1, 1, 2])
-    h1.metric("Cook Time", f"{winner['cook_time']}m")
-    h2.metric("Total Cost", f"₹{total_cook_cost}")
-    h3.metric("Calories", f"{total_cal} kcal")
+    h1, h2, h3, h4 = st.columns([1, 1, 1, 2])
     
-    # INTELLIGENCE LAYER: Time Breakdown
-    with h4.expander("⏱️ Click for Steps", expanded=False):
-        st.write(winner['prep_steps'])
-        
-    blinkit_url = f"https://www.google.com/search?q=buy+{winner['name'].replace(' ', '+')}+ingredients+on+Blinkit"
-    h5.link_button("🛒 Shop Ingredients (Blinkit)", blinkit_url, use_container_width=True)
+    # Metric 1: Time as a Link
+    h1.metric("Cook Time (Click for Video)", f"{m['cook_time']}m")
+    h1.link_button("📺 Watch Recipe", m['recipe_url'], use_container_width=True)
+    
+    # Metric 2: Cost as a Popover (Clickable Breakdown)
+    with h2:
+        st.metric("Total Cost", f"₹{m['cost'] * headcount}")
+        with st.popover("💰 View Breakup"):
+            st.write(f"Breakdown for {headcount} person(s):")
+            st.write(m['cost_breakup'])
+            
+    h3.metric("Calories", f"{m['cal'] * headcount} kcal")
+    
+    blinkit_url = f"https://www.google.com/search?q=buy+{m['name'].replace(' ', '+')}+ingredients+on+Blinkit"
+    h4.link_button("🛒 Shop Ingredients (Blinkit)", blinkit_url, use_container_width=True)
 
-    st.markdown("---")
+    st.divider()
 
-    # --- ROW 2: ORDERING (Smart Attributes) ---
+    # --- ROW 2: OPTION 2 (ORDER ONLINE) ---
     st.subheader("🛵 Option 2: Order Online")
-    o1, o2, o3, o4, o5 = st.columns([1, 1, 1, 1, 2])
-    o1.metric("Delivery", f"{winner['order_time']}m")
-    o2.metric("Total Cost", f"₹{total_order_cost}")
-    o3.metric("Calories", f"{total_cal} kcal")
+    o1, o2, o3, o4 = st.columns([1, 1, 1, 2])
     
-    # INTELLIGENCE LAYER: Cost Breakdown (Scaling with Headcount)
-    with o4.expander("💰 Click for Breakup", expanded=False):
-        st.caption(f"Price breakdown for {headcount} person(s)")
-        # Simple string multiplication for scaled breakdown
-        scaled_breakup = winner['cost_breakup']
-        st.write(scaled_breakup)
-        
-    zomato_url = f"https://www.google.com/search?q=order+{winner['name'].replace(' ', '+')}+on+Zomato"
-    o5.link_button("🥡 Order Now (Zomato)", zomato_url, use_container_width=True)
+    o1.metric("Delivery", f"{m['order_time']}m")
+    
+    with o2:
+        st.metric("Total Cost", f"₹{m['order'] * headcount}")
+        with st.popover("💵 Why this price?"):
+            st.write(f"Includes Restaurant Markup & Est. Delivery Fee for {headcount} portions.")
+            
+    o3.metric("Calories", f"{m['cal'] * headcount} kcal")
+    
+    zomato_url = f"https://www.google.com/search?q=order+{m['name'].replace(' ', '+')}+on+Zomato"
+    o4.link_button("🥡 Order Now (Zomato)", zomato_url, use_container_width=True)
 
 st.divider()
-st.caption("v1.7 | Smart Metrics Active (Click ⏱️ or 💰 to expand) | Standard Time & Cost Estimates")
+st.caption("v1.8 | Metric-Integrated Actions | Youtube Recipe Links")
