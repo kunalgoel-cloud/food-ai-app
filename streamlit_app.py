@@ -2,8 +2,6 @@ import streamlit as st
 import pandas as pd
 
 # 1. THE EXPANDED DATABASE (Phase 1.2)
-# Cook Time = Prep + Cooking in minutes
-# Order Time = Delivery time in 2026 urban India (Blinkit/Zomato/Zepto)
 meals_data = [
     # BREAKFAST
     {"name": "Veg Poha", "type": "Breakfast", "vibe": "Quick", "cal": 250, "cook_time": 15, "order_time": 25, "cost": 35, "order": 90, "tags": "light, healthy, poha, rice, quick", "veg": True},
@@ -36,13 +34,6 @@ df = pd.DataFrame(meals_data)
 
 # --- UI CONFIG ---
 st.set_page_config(page_title="MealBrain AI", page_icon="🍲")
-
-# --- CUSTOM CSS FOR BETTER READABILITY ---
-st.markdown("""
-    <style>
-    .metric-card { background-color: #f0f2f6; padding: 15px; border-radius: 10px; border: 1px solid #ddd; }
-    </style>
-    """, unsafe_allow_index=True)
 
 st.title("🍲 MealBrain AI")
 st.caption("Intelligence Layer v1.2 | Live 2026 Price & Time Estimates")
@@ -81,39 +72,40 @@ if st.button("Generate Smart Recommendation"):
         filtered_df['score'] = 0
 
     if not filtered_df.empty:
+        # Sort so the highest score match is at the top
         winner = filtered_df.sort_values(by='score', ascending=False).iloc[0]
         
         # --- DISPLAY RESULTS ---
         st.markdown(f"## 🏆 Top Choice: **{winner['name']}**")
         
-        # FIRST ROW: TIME & CALORIES
+        # ROW 1: STATS
         st.divider()
         c1, c2, c3 = st.columns(3)
         c1.metric("🔥 Calories", f"{winner['cal']} kcal")
         c2.metric("⏱️ Cook Time", f"{winner['cook_time']} min")
-        c3.metric("🚚 Order Time", f"{winner['order_time']} min")
+        c3.metric("🚚 Delivery", f"{winner['order_time']} min")
 
-        # SECOND ROW: COST SAVINGS
+        # ROW 2: MONEY
         st.divider()
         s1, s2, s3 = st.columns(3)
-        s1.metric("💰 Cook at Home", f"₹{winner['cost']}")
-        s2.metric("🥡 Order Price", f"₹{winner['order']}")
+        s1.metric("💰 Home Cost", f"₹{winner['cost']}")
+        s2.metric("🥡 App Price", f"₹{winner['order']}")
         savings = winner['order'] - winner['cost']
-        s3.metric("📈 You Save", f"₹{savings}", f"{int((savings/winner['order'])*100)}%")
+        s3.metric("📈 Savings", f"₹{savings}", f"{int((savings/winner['order'])*100)}%")
 
         # RECOMMENDATION CONTEXT
-        st.info(f"💡 **Why this?** At **{winner['cal']} calories**, this fits your **{goal.lower()}** goal. Cooking at home takes only **{winner['cook_time']} minutes**—that's faster (or nearly as fast) as waiting for a delivery driver!")
+        st.info(f"💡 **Why this?** It's {winner['cal']} calories. Home-prep is {winner['cook_time']}m vs {winner['order_time']}m delivery. You save ₹{savings}!")
 
         # MONETIZATION BUTTONS
-        st.markdown("### 🛒 Next Steps")
+        st.markdown("### 🛒 Take Action")
         col_btn1, col_btn2 = st.columns(2)
         with col_btn1:
-            st.button(f"🛒 Shop Ingredients (Blinkit/Zepto)", use_container_width=True)
+            st.button(f"🛒 Shop Ingredients (Blinkit)", use_container_width=True)
         with col_btn2:
-            st.button(f"🥡 Order RTE Pack (Swiggy)", use_container_width=True)
+            st.button(f"🥡 Order Ready-to-Eat (Zepto)", use_container_width=True)
             
     else:
-        st.error("I couldn't find a perfect match. Try relaxing your calorie filters or searching for 'Everything'!")
+        st.error("I couldn't find a match! Try choosing 'Balanced' or 'Everything'.")
 
 st.divider()
-st.caption("Engine Version 1.2 | All times include prep + active cooking.")
+st.caption("v1.2 Fixed | Standardized Interface")
