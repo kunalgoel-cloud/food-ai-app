@@ -1,6 +1,6 @@
 import streamlit as st
 import pandas as pd
-import random
+import webbrowser
 
 # --- DATABASE ---
 meals_data = [
@@ -41,16 +41,16 @@ suggest_next = c_btn2.button("🔄 Suggest Another")
 
 if get_meal or suggest_next:
     if not f_df.empty:
+        # Randomized Selection
         winner = f_df.sample(n=1).iloc[0]
         
         st.header(f"Recommendation: {winner['name']}")
         
-        # FIXED IMAGE ENGINE
-        # Uses Source Unsplash for better food-specific results
-        img_url = f"https://source.unsplash.com/800x400/?indian,food,{winner['name'].replace(' ', '')}"
-        st.image(img_url, use_column_width=True)
+        # New Image Engine (Static placeholder to avoid 404s/statues)
+        img_url = f"https://loremflickr.com/800/400/indianfood,{winner['name'].replace(' ', '')}"
+        st.image(img_url, use_container_width=True)
 
-        st.markdown("---")
+        st.divider()
         
         # --- ROW 1: HOME COOKING ---
         st.subheader("🏠 Option: Cook at Home")
@@ -59,10 +59,11 @@ if get_meal or suggest_next:
         h2.metric("Total Cost", f"₹{winner['cost'] * headcount}")
         h3.metric("Calories", f"{winner['cal'] * headcount}kcal")
         h4.metric("Effort", winner['vibe'])
-        blinkit_url = f"https://www.google.com/search?q=buy+{winner['name'].replace(' ', '+')}+ingredients+on+Blinkit"
-        h5.markdown(f"<br><a href='{blinkit_url}' target='_blank'><button style='width:100%; border-radius:5px; background-color:#FFD700; border:none; padding:10px;'>🛒 Shop Ingredients (Blinkit)</button></a>", unsafe_allow_index=True)
+        
+        blinkit_search = f"https://www.google.com/search?q=buy+{winner['name'].replace(' ', '+')}+ingredients+on+Blinkit"
+        h5.link_button("🛒 Shop Ingredients (Blinkit)", blinkit_search, use_container_width=True)
 
-        st.markdown("---")
+        st.divider()
 
         # --- ROW 2: ORDERING ---
         st.subheader("🛵 Option: Order Online")
@@ -70,11 +71,12 @@ if get_meal or suggest_next:
         o1.metric("Delivery", f"{winner['order_time']}m")
         o2.metric("Total Cost", f"₹{winner['order'] * headcount}")
         o3.metric("Calories", f"{winner['cal'] * headcount}kcal")
-        o4.metric("Source", "Restaurant")
-        zomato_url = f"https://www.google.com/search?q=order+{winner['name'].replace(' ', '+')}+from+Zomato"
-        o5.markdown(f"<br><a href='{zomato_url}' target='_blank'><button style='width:100%; border-radius:5px; background-color:#CB202D; color:white; border:none; padding:10px;'>🥡 Order Now (Zomato)</button></a>", unsafe_allow_index=True)
+        o4.metric("Type", "Restaurant")
+        
+        zomato_search = f"https://www.google.com/search?q=order+{winner['name'].replace(' ', '+')}+from+Zomato"
+        o5.link_button("🥡 Order Now (Zomato)", zomato_search, use_container_width=True)
 
     else:
-        st.error("No matches! Try changing your 'Vibe' or 'Health Goal'.")
+        st.error("No matches found! Try adjusting your filters.")
 
-st.caption("v1.4 | Standardized UI | Accurate Scaling")
+st.caption("v1.5 Stability Fix | Dynamic Scaling Active")
