@@ -23,7 +23,7 @@ def get_database():
 
 df = get_database()
 
-st.set_page_config(page_title="MealBrain Daily Planner", layout="wide")
+st.set_page_config(page_title="MealBrain AI Planner", layout="wide")
 
 # --- SESSION STATE ---
 if 'plan' not in st.session_state:
@@ -44,78 +44,80 @@ with st.sidebar:
     adults = st.number_input("Adults", 1, 10, 2)
     kids = st.number_input("Kids", 0, 10, 1)
     diet = st.radio("Diet Preference", ["Everything", "Veg Only"])
-    st.divider()
-    show_macros = st.checkbox("Show Macros (Protein/Fat/Carbs)", value=True)
-    if st.button("🚀 Generate Entire Day", use_container_width=True):
+    if st.button("🚀 Reset Day Plan", use_container_width=True):
         for t in ["Breakfast", "Lunch", "Dinner"]: set_meal(t, diet)
 
-# Initialize if empty
 if st.session_state.plan["Breakfast"] is None:
     for t in ["Breakfast", "Lunch", "Dinner"]: set_meal(t, diet)
 
-# --- HEADER & SAVINGS ---
-st.title("🍲 MealBrain Daily Planner")
+# --- MATH ---
 p = st.session_state.plan
 eff_hc = adults + (kids * 0.6)
 total_cook = sum([p[t]['cost'] for t in p]) * eff_hc
 total_order = sum([p[t]['order'] for t in p]) * eff_hc
+
+st.title("🍲 MealBrain Daily Planner")
 st.metric("Total Day Savings", f"₹{int(total_order - total_cook)}")
 
-# --- INTERACTIVE CONTROLS (ALIGNED) ---
-st.write("### 🛠️ Customize Your Plan")
+# --- INTEGRATED ROW FUNCTION ---
+def render_meal_row(m_type, headcount, scale=1.0, key_prefix="A"):
+    m = p[m_type]
+    opts = df[(df['type'] == m_type) & (df['veg'] if diet == "Veg Only" else True)]['name'].tolist()
+    
+    # Visual Row Container
+    with st.container(border=True):
+        c1, c2, c3, c4, c5, c6 = st.columns([3, 1, 1, 1, 1, 1.5])
+        
+        # 1. Selection Dropdown
+        with c1:
+            new_sel = st.selectbox(f"Choose {m_type}", opts, index=opts.index(m['name']) if m['name'] in opts else 0, key=f"sel_{key_prefix}_{m_type}", label_visibility="collapsed")
+            if new_sel != m['name']:
+                set_meal(m_type, diet, new_sel)
+                st.rerun()
+        
+        # 2. Random Button
+        with c2:
+            if st.button("🎲", key=f"rnd_{key_prefix}_{m_type}", help="Randomize Meal", use_container_width=True):
+                set_meal(m_type, diet)
+                st.rerun()
+
+        # 3. Time
+        c3.markdown(f"⏱️ **{m['cook_time']}m**")
+
+        # 4. Calories + Popover Macros
+        with c4:
+            with st.popover(f"🔥 {int(m['cal'] * scale)}", use_container_width=True):
+                st.markdown("**Macronutrients**")
+                st.write(f"Protein: {int(m['p']*scale)}g")
+                st.write(f"Fat: {int(m['f']*scale)}g")
+                st.write(f"Carbs: {int(m['c']*scale)}g")
+
+        # 5. Cost + Popover Breakup
+        with c5:
+            with st.popover(f"₹{int(m['cost'] * headcount * scale)}", use_container_width=True):
+                st.markdown("**Cost Breakup**")
+                st.caption(f"For {headcount} person(s)")
+                st.write(m['breakup'])
+
+        # 6. Links
+        with c6:
+            yt_url = f"https://www.youtube.com/results?search_query=how+to+make+{m['name'].replace(' ', '+')}"
+            st.link_button("📺 Video", yt_url, use_container_width=True)
+
+# --- LAYOUT ---
+st.subheader("🏠 Home Cooking (Adults)")
 for t in ["Breakfast", "Lunch", "Dinner"]:
-    # Using specific column ratios for perfect alignment
-    col_sel, col_btn, col_brk = st.columns([4, 1, 1])
-    
-    opts = df[(df['type'] == t) & (df['veg'] if diet == "Veg Only" else True)]['name'].tolist()
-    curr = p[t]['name']
-    
-    with col_sel:
-        new_sel = st.selectbox(f"Select {t}", opts, index=opts.index(curr) if curr in opts else 0, key=f"sel_{t}")
-        if new_sel != curr:
-            set_meal(t, diet, new_sel)
-            st.rerun()
-            
-    with col_btn:
-        st.write(" ") # Padding for alignment
-        if st.button(f"🎲 Random", key=f"btn_{t}", use_container_width=True):
-            set_meal(t, diet)
-            st.rerun()
-            
-    with col_brk:
-        st.write(" ") # Padding for alignment
-        with st.popover("💰 Breakup", use_container_width=True):
-            st.caption(f"Price for {t}")
-            st.write(p[t]['breakup'])
+    render_meal_row(t, adults, scale=1.0, key_prefix="adult")
 
+st.subheader("👶 Home Cooking (Kids - 60% Portions)")
+for t in ["Breakfast", "Lunch", "Dinner"]:
+    render_meal_row(t, kids, scale=0.6, key_prefix="kids")
+
+# Quick Commerce Link
 st.divider()
-
-# --- TABLES ---
-def draw_table(title, headcount, is_kids=False):
-    st.subheader(title)
-    scale = 0.6 if is_kids else 1.0
-    rows = []
-    for t in ["Breakfast", "Lunch", "Dinner"]:
-        m = p[t]
-        row = {
-            "Meal": t,
-            "Dish": m['name'],
-            "Time": f"{m['cook_time']}m",
-            "Calories": f"{int(m['cal'] * scale)} kcal",
-            "Cost": f"₹{int(m['cost'] * headcount * scale)}",
-            "Recipe": f"https://www.youtube.com/results?search_query=how+to+make+{m['name'].replace(' ', '+')}"
-        }
-        if show_macros:
-            row.update({
-                "Protein": f"{int(m['p']*scale)}g",
-                "Fat": f"{int(m['f']*scale)}g",
-                "Carbs": f"{int(m['c']*scale)}g"
-            })
-        rows.append(row)
-    st.table(pd.DataFrame(rows).set_index("Meal"))
-
-draw_table("🏠 Option 1: Home Cooking (Adults)", adults)
-draw_table("👶 Option 1: Home Cooking (Kids)", kids, is_kids=True)
+st.markdown("### 🛒 Quick Commerce")
+blinkit_query = "+".join([p[t]['name'].replace(' ', '+') for t in p])
+st.link_button("🛍️ Shop All Ingredients on Blinkit", f"https://www.google.com/search?q=buy+ingredients+for+{blinkit_query}+on+Blinkit", use_container_width=True)
 
 st.divider()
 
@@ -127,14 +129,12 @@ for t in ["Breakfast", "Lunch", "Dinner"]:
     o_rows.append({
         "Meal": t,
         "Zomato Item": m['name'],
-        "Total Cal": f"{int(m['cal'] * eff_hc)} kcal",
         "Total Cost": f"₹{int(m['order'] * eff_hc)}"
     })
 st.table(pd.DataFrame(o_rows).set_index("Meal"))
 
 st.markdown(f"### **Total Zomato Bill: ₹{int(total_order)}**")
-# Correct Zomato Deep Link logic
 zomato_query = "+".join([p[t]['name'].replace(' ', '+') for t in p])
-st.link_button("🥡 Order All on Zomato", f"https://www.google.com/search?q=order+{zomato_query}+on+Zomato", use_container_width=True)
+st.link_button("🥡 Order Full Day on Zomato", f"https://www.google.com/search?q=order+{zomato_query}+on+Zomato", use_container_width=True)
 
-st.caption("v2.9 | Fixed Grid Alignment | Macro Support | Dynamic YT Search")
+st.caption("v3.0 | Row-Integrated UI | Macro & Cost Popovers | Quick Commerce Restored")
